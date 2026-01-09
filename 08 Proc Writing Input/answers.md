@@ -7,19 +7,19 @@
 Answer the following questions:
 
 1. **What happens if you don't null-terminate the string after `copy_from_user()`?**
-   - `printk()` and string functions will read beyond the buffer, causing kernel oops or garbled output
+   String functions like `printk()` and `strcmp()` read beyond the buffer boundary, causing kernel crashes (oops), garbled output, or information leaks.
 
 2. **Why is `copy_from_user()` necessary instead of a direct memcpy?**
-   - User-space pointers can be invalid or malicious; `copy_from_user()` safely validates the pointer and handles page faults
+   Direct dereferencing of user pointers in kernel code is forbidden for security reasons. `copy_from_user()` safely validates pointers, handles page faults, and prevents user code from corrupting kernel memory.
 
 3. **What does `0666` permission mean for a `/proc` file?**
-   - Read and write for owner (user), group, and others (rw-rw-rw-)
+   It means read and write access (rw-) for owner, group, and others—equivalent to chmod 666.
 
 4. **How do you prevent buffer overflow when writing to `/proc`?**
-   - Check `count > MAX_LEN - 1` and cap it; always leave 1 byte for null terminator
+   Always check if `count > MAX_LEN - 1`, cap it to the maximum safe size, and null-terminate by setting `message[count] = '\0'` after `copy_from_user()`.
 
 5. **What is `loff_t *ppos` used for?**
-   - It tracks the file position pointer to handle partial reads/writes and seeking
+   It tracks the current file position for partial reads/writes; it enables `simple_read_from_buffer()` to resume reading from where the user left off.
 
 ---
 
@@ -34,32 +34,16 @@ Answer the following questions:
 - Log the state change to dmesg
 - Return `-EINVAL` if invalid input is received
 
-**Starter Code**:
+**Solution**:
 
 ```c
-#include <linux/init.h>
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/proc_fs.h>
-#include <linux/uaccess.h>
-
-#define PROC_NAME "writer"
-#define MAX_LEN 10
-
-static int logging_enabled = 0;  // Flag to track state
-char message[MAX_LEN];
-
-ssize_t writer_read(struct file *file, char __user *buf, 
-                    size_t count, loff_t *ppos)
-{
-    char status[20];
-    int len = snprintf(status, sizeof(status), "logging=%d\n", logging_enabled);
-    return simple_read_from_buffer(buf, count, ppos, status, len);
-}
+static int logging_enabled = 0;
 
 ssize_t writer_write(struct file *file, const char __user *buf, 
                      size_t count, loff_t *ppos)
 {
+    char message[MAX_LEN];
+    
     if (count > MAX_LEN - 1)
         count = MAX_LEN - 1;
     
@@ -68,58 +52,19 @@ ssize_t writer_write(struct file *file, const char __user *buf,
     
     message[count] = '\0';
     
-    // TODO: Parse "ON" or "OFF" and set logging_enabled
-    // TODO: Log state change
-    // TODO: Return -EINVAL for invalid input
+    if (strncasecmp(message, "ON", 2) == 0) {
+        logging_enabled = 1;
+        printk(KERN_INFO "Logging ENABLED\n");
+    } else if (strncasecmp(message, "OFF", 3) == 0) {
+        logging_enabled = 0;
+        printk(KERN_INFO "Logging DISABLED\n");
+    } else {
+        printk(KERN_ERR "Invalid command: %s\n", message);
+        return -EINVAL;
+    }
     
     return count;
 }
-
-static const struct file_operations writer_fops = {
-    .read  = writer_read,
-    .write = writer_write,
-};
-
-static int __init writer_init(void)
-{
-    proc_create(PROC_NAME, 0666, NULL, &writer_fops);
-    printk(KERN_INFO "/proc/%s created (logging initially disabled)\n", PROC_NAME);
-    return 0;
-}
-
-static void __exit writer_exit(void)
-{
-    remove_proc_entry(PROC_NAME, NULL);
-    printk(KERN_INFO "/proc/%s removed\n", PROC_NAME);
-}
-
-module_init(writer_init);
-module_exit(writer_exit);
-
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Your Name");
-MODULE_DESCRIPTION("Flag-based /proc control");
-```
-
-**Solution Hint**:
-
-- Use `strcmp()` or `strncasecmp()` for string comparison
-- Use `printk(KERN_INFO "Logging %s\n", logging_enabled ? "ENABLED" : "DISABLED");`
-- Set `logging_enabled = 1` for "ON", `0` for "OFF"
-
-**Test Cases**:
-
-```bash
-echo "ON" | sudo tee /proc/writer
-cat /proc/writer
-# Expected: logging=1
-
-echo "OFF" | sudo tee /proc/writer
-cat /proc/writer
-# Expected: logging=0
-
-echo "INVALID" | sudo tee /proc/writer
-# Should log an error
 ```
 
 ---
@@ -142,106 +87,128 @@ echo "INVALID" | sudo tee /proc/writer
    - Return the current state and timestamp
    - Return format: `State: [IDLE|RUNNING], Last command: [command], Time: [jiffies]`
 
-**Starter Code**:
+**Bonus**: Add error handling for invalid commands (e.g., return `-EINVAL`)
+
+**Solution**:
 
 ```c
-#include <linux/init.h>
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/proc_fs.h>
-#include <linux/uaccess.h>
-#include <linux/jiffies.h>
+#include<linux/init.h>
+#include<linux/module.h>
+#include<linux/kernel.h>
+#include<linux/fs.h>
+#include<linux/uaccess.h>
+#include<linux/proc_fs.h>
+#include<linux/seq_file.h>
+#include<linux/kdev_t.h>
+#include<linux/cdev.h>
+#include<linux/device.h>
+#include<linux/errno.h>
+#include<linux/types.h>
+#include<linux/string.h>
+#include<linux/jiffies.h>
 
-#define MAX_LEN 20
+unsigned long stime;
 
-enum state { IDLE, RUNNING };
-
-static enum state current_state = IDLE;
-static char last_command[MAX_LEN] = "NONE";
-static unsigned long last_time = 0;
-
-// Write to /proc/control
-ssize_t control_write(struct file *file, const char __user *buf, 
-                      size_t count, loff_t *ppos)
-{
-    char command[MAX_LEN];
-    
-    if (count > MAX_LEN - 1)
-        count = MAX_LEN - 1;
-    
-    if (copy_from_user(command, buf, count))
-        return -EFAULT;
-    
-    command[count] = '\0';
-    
-    // TODO: Parse command and update state
-    // TODO: Log command
-    // TODO: Update last_command and last_time
-    
-    return count;
-}
-
-// Read from /proc/status
-ssize_t status_read(struct file *file, char __user *buf, 
-                    size_t count, loff_t *ppos)
-{
-    char status[128];
-    int len;
-    
-    // TODO: Format status string with current_state, last_command, last_time
-    
-    return simple_read_from_buffer(buf, count, ppos, status, len);
-}
-
-static const struct file_operations control_fops = {
-    .write = control_write,
+const char *cmd[] = {
+ "START",
+ "STOP",
+ "QUERY"
 };
 
-static const struct file_operations status_fops = {
-    .read = status_read,
+char prev_rec[] = "DEFAULT";
+char rec[] = "DEFAULT";
+
+static ssize_t ctrl_store(struct file *file, const char __user *buf, size_t len, loff_t *pos)
+{
+ _Bool matched = 0;
+ char temp[] = "DEFAULT";
+ u32 len_t = sizeof(temp) < len ? sizeof(temp) : len;
+ int ret = copy_from_user(temp, buf, len_t);
+ if (ret < 0)
+ {
+  return -EINVAL;
+ }
+    temp[len_t - 1] = '\0';
+ for (int i = 0; i < 3; i++)
+ {
+  if (strcmp(cmd[i], temp) == 0)
+  {
+   pr_info("Received Command: %s", temp);
+   matched = 1;
+   break;
+  }
+ }
+ if (!matched)
+ {
+  pr_info("INVALID Command: %s", rec);
+  memset(rec, '\0', sizeof(rec));
+ }
+ else
+ {
+  strscpy(prev_rec, rec, sizeof(rec));
+  strscpy(rec, temp, sizeof(rec));
+ }
+ return len;
+}
+
+static struct proc_ops ctrl_fops = {
+ .proc_write = ctrl_store
 };
 
-static int __init cmd_init(void)
+static int stat_show(struct seq_file *file, void *v)
 {
-    proc_create("control", 0200, NULL, &control_fops);
-    proc_create("status", 0444, NULL, &status_fops);
-    printk(KERN_INFO "/proc/control and /proc/status created\n");
-    return 0;
+ seq_printf(file, "State:%s, Last command: %s, Time: %lu\n", rec, prev_rec, ((jiffies/HZ) - stime));
+ return 0;
 }
 
-static void __exit cmd_exit(void)
+static int stat_open(struct inode *inode, struct file *file)
 {
-    remove_proc_entry("control", NULL);
-    remove_proc_entry("status", NULL);
-    printk(KERN_INFO "/proc entries removed\n");
+ return single_open(file, stat_show, NULL);
 }
 
-module_init(cmd_init);
-module_exit(cmd_exit);
+static struct proc_ops stat_fops = {
+  .proc_open = stat_open,
+  .proc_read = seq_read,
+  .proc_release = seq_release
+};
+
+static int __init my_init(void)
+{
+ stime = jiffies/HZ;
+ proc_create("control", 0200, NULL, &ctrl_fops);
+ proc_create("status", 0444, NULL, &stat_fops);
+ 
+ pr_info("Module loaded\n");
+ return 0;
+}
+
+static void __exit my_exit(void)
+{
+ remove_proc_entry("control", NULL);
+ remove_proc_entry("status", NULL);
+ 
+ pr_info("Module unloaded\n");
+}
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Your Name");
-MODULE_DESCRIPTION("Dual /proc command-response interface");
+module_init(my_init);
+module_exit(my_exit);
 ```
 
-**Expected Behavior**:
+**Output**
 
-```bash
-# Write command
-echo "START" | sudo tee /proc/control
-# Logs: "Command received: START"
-
-# Read status
-cat /proc/status
-# Returns: "State: RUNNING, Last command: START, Time: 123456789"
-
-# Stop
-echo "STOP" | sudo tee /proc/control
-cat /proc/status
-# Returns: "State: IDLE, Last command: STOP, Time: 123456890"
 ```
-
-**Bonus**: Add error handling for invalid commands (e.g., return `-EINVAL`)
+root@ahmed:/home/ahmed/BitLearnTasks/proc_rw# cd /proc/
+root@ahmed:/proc# cat status
+State:DEFAULT, Last command: DEFAULT, Time: 16
+root@ahmed:/proc# echo 'START' > control
+root@ahmed:/proc# cat status
+State:START, Last command: DEFAULT, Time: 35
+root@ahmed:/proc# echo 'STOP' > control
+root@ahmed:/proc# cat status
+State:STOP, Last command: START, Time: 47
+root@ahmed:/proc#
+```
 
 ---
 
