@@ -6,7 +6,7 @@
 
 Answer the following questions:
 
-1. **What happens if you don't null-terminate the string after `copy_from_user()`?**
+1. **What happens if the string is not null-terminated after `copy_from_user()`?**
    String functions like `printk()` and `strcmp()` read beyond the buffer boundary, causing kernel crashes (oops), garbled output, or information leaks.
 
 2. **Why is `copy_from_user()` necessary instead of a direct memcpy?**
@@ -15,11 +15,11 @@ Answer the following questions:
 3. **What does `0666` permission mean for a `/proc` file?**
    It means read and write access (rw-) for owner, group, and others—equivalent to chmod 666.
 
-4. **How do you prevent buffer overflow when writing to `/proc`?**
-   Always check if `count > MAX_LEN - 1`, cap it to the maximum safe size, and null-terminate by setting `message[count] = '\0'` after `copy_from_user()`.
+4. **How is buffer overflow prevented when writing to `/proc`?**
+   The count should be checked to ensure `count > MAX_LEN - 1`, capped to the maximum safe size, and null-terminated by setting `message[count] = '\0'` after `copy_from_user()`.
 
-5. **What is `loff_t *ppos` used for?**
-   It tracks the current file position for partial reads/writes; it enables `simple_read_from_buffer()` to resume reading from where the user left off.
+5. **What is the purpose of `loff_t *ppos`?**
+   It tracks the current file position for partial reads/writes; it enables `simple_read_from_buffer()` to resume reading from where the previous operation left off.
 
 ---
 

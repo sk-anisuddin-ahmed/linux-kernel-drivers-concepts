@@ -18,9 +18,9 @@
    - `System.map-*`: Kernel symbol table
    - `config-*`: Kernel configuration file used for compilation
 
-3. **What folder(s) exist in `/usr/src/`? Can you see `linux-source` or `linux-headers`?**
-   - Typically you'll see `linux-headers-*` which contains kernel headers for building modules
-   - `linux-source-*` may exist if you installed the full source code
+3. **What folder(s) typically exist in `/usr/src/`? Are `linux-source` or `linux-headers` folders present?**
+   - Typically `linux-headers-*` folders are present, which contain kernel headers for building modules
+   - `linux-source-*` may exist if the full source code was installed
    - These folders are used for kernel development and building custom modules
 
 **Task 2:** Write 3–4 line answers to each:
@@ -34,11 +34,11 @@
 3. **Why is `initramfs` used?**
    `initramfs` (initial RAM filesystem) is a temporary filesystem loaded by GRUB before the real root filesystem becomes available. It contains essential drivers and modules needed to access storage devices, decrypt encrypted partitions, and mount the root filesystem. Without it, the kernel couldn't access the disk to load the rest of the system.
 
-4. **Why should you keep old kernels installed?**
-   Keeping old kernels provides a fallback if your new kernel has bugs, hardware incompatibilities, or causes system instability. You can reboot into the previous kernel from GRUB to troubleshoot issues, making it a safe recovery option. It also allows you to test new kernels without immediately replacing the working version.
+4. **Why are old kernels kept installed?**
+   Old kernels provide a fallback if a new kernel has bugs, hardware incompatibilities, or causes system instability. The previous kernel can be booted from GRUB to troubleshoot issues, making it a safe recovery option. It also allows new kernels to be tested without immediately replacing the working version.
 
 5. **What does `make menuconfig` do?**
-   `make menuconfig` launches an interactive text-based menu interface that allows you to configure kernel options before compilation. You can enable or disable features, drivers, and modules based on your system needs. Your selections are saved in a `.config` file that the Makefile reads during the build process.
+   `make menuconfig` launches an interactive text-based menu interface for configuring kernel options before compilation. Features, drivers, and modules can be enabled or disabled based on system requirements. The selections are saved in a `.config` file that the Makefile reads during the build process.
 
 **Task 3:** Match the following steps to their command:
 

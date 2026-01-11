@@ -4,7 +4,7 @@
 
 **Task 1: Short Answer Questions**
 
-1. **What is the /proc filesystem and how is it different from a regular filesystem?**
+1. **What is the /proc filesystem and how does it differ from a regular filesystem?**
    The `/proc` filesystem is a virtual filesystem that displays kernel runtime information (cpuinfo, meminfo, process data, etc.) without consuming disk space. Unlike regular filesystems, `/proc` is dynamically generated from kernel memory, exists only while the system is running, and disappears after shutdown.
 
 2. **Explain what `seq_printf()` does and why it's preferred over regular `sprintf()`**
@@ -121,7 +121,7 @@ cat /proc/cpuinfo
 3. **Which file shows your kernel version?**
    - `/proc/version` displays the kernel version and build details
 
-4. **What information can you get from `/proc/meminfo`?**
+4. **What information is available from `/proc/meminfo`?**
    - Total RAM, available memory, free memory, buffers, cached memory, swap total/free, and other memory statistics
 
 **Task 4: Create a Counter /proc Entry**

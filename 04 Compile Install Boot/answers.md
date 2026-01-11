@@ -36,8 +36,8 @@ Answer:
 2. **Which is the default?**
    The first menuentry listed is the default kernel that boots automatically.
 
-3. **How can you manually choose which one to boot?**
-   Press arrow keys to select a different menuentry when GRUB menu appears, then press Enter. Hold Shift during boot to force GRUB menu to show.
+3. **How is a different kernel manually selected for boot?**
+   Arrow keys can be used to select a different menuentry when the GRUB menu appears, then Enter is pressed. Shift should be held during boot to force the GRUB menu to display.
 
 **Task 4:** Fill in the blanks:
 

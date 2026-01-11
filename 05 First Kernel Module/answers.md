@@ -7,7 +7,7 @@
 1. **What is a kernel module?**
    A kernel module is dynamically loadable code that extends kernel functionality without rebooting. It can be inserted with `insmod` and removed with `rmmod`.
 
-2. **Why do we use `printk()` instead of `printf()`?**
+2. **Why is `printk()` used instead of `printf()`?**
    `printk()` writes to the kernel log (viewable via `dmesg`) and works in kernel mode where `printf()` cannot. It supports log levels like KERN_INFO and KERN_ERR to categorize messages.
 
 3. **What does `insmod` do?**
@@ -16,8 +16,8 @@
 4. **What is the purpose of `module_init()` and `module_exit()`?**
    `module_init()` defines the function that runs when the module loads, while `module_exit()` defines the function that runs when it unloads. These macros tell the kernel the entry and exit points for the module.
 
-5. **Why should kernel modules be tested in VMs?**
-   Kernel modules run in privileged kernel space and can crash the entire system if buggy. Testing in VMs provides isolation and allows easy rollback via snapshots without risking your main system.
+5. **Why are kernel modules tested in VMs?**
+   Kernel modules run in privileged kernel space and can crash the entire system if buggy. Testing in VMs provides isolation and allows easy rollback via snapshots without risking the main system.
 
 **Task 2:** Change your module to:
 

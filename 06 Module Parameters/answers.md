@@ -92,7 +92,7 @@ ahmed@ahmed:~/BitLearnTasks/msg_cnt$ cat /sys/module/main/parameters/repeat_coun
 5
 ```
 
-Answer: Can you modify these files after module load?
+Answer: Are these files modifiable after module load?
 yes
 echo "Hi" > /sys/module/main/parameters/message
 echo 3 > /sys/module/main/parameters/repeat_count

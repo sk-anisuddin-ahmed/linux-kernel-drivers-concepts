@@ -13,9 +13,9 @@ ls
 
 Find a folder like `linux-source-*` or `linux-headers-*`. Explore and answer:
 
-- **What folders do you see inside?** Common folders include `arch/`, `drivers/`, `fs/`, `mm/`, `net/`, `kernel/`, `include/`, `lib/`, and `init/`.
-- **What folder likely contains USB driver code?** The `drivers/usb/` folder contains all USB-related drivers.
-- **What folder has memory management code?** The `mm/` folder contains memory management code for paging, allocation, and virtual memory.
+- **What folders are typically visible inside?** Common folders include `arch/`, `drivers/`, `fs/`, `mm/`, `net/`, `kernel/`, `include/`, `lib/`, and `init/`.
+- **Which folder likely contains USB driver code?** The `drivers/usb/` folder contains all USB-related drivers.
+- **Which folder has memory management code?** The `mm/` folder contains memory management code for paging, allocation, and virtual memory.
 
 ### Task 2: Match Kernel Folders with Their Purpose
 
@@ -37,7 +37,7 @@ Match the kernel folders with what they do (write it down):
 
 3. **Why is the kernel source divided into many folders?** The modular folder structure organizes code by functionality (drivers, filesystems, memory management, etc.), making it easier to maintain, debug, and locate specific code.
 
-4. **Can we remove features from the kernel before building? How?** Yes, you can use `make menuconfig`, `make xconfig`, or `make config` to select or deselect features, drivers, and modules before compilation.
+4. **How are features removed from the kernel before building?** Yes, `make menuconfig`, `make xconfig`, or `make config` can be used to select or deselect features, drivers, and modules before compilation.
 
 5. **Why should we avoid modifying the top-level kernel Makefile directly?** Modifying the top-level Makefile can break the build system and make it difficult to maintain when updating to new kernel versions; instead, use Kconfig files.
 
@@ -69,6 +69,6 @@ The three main steps are: (1) Configuration—selecting features using `make men
 
 Kconfig defines what options are available, Makefile uses the selected options from `.config` to determine which source files to compile, and the source code files are the actual implementation. Together, they enable selective, customizable kernel compilation.
 
-### Q7: Can you explore kernel source on Ubuntu without downloading anything?
+### Q7: Is it possible to explore kernel source on Ubuntu without downloading anything?
 
-Yes, you can explore kernel headers and source structure in `/usr/src/` or `/usr/src/linux-headers-*/` directories without downloading, which contain the build system and headers. However, to explore the complete source or make modifications, you'll need to download the full kernel source.
+Yes, kernel headers and source structure can be explored in `/usr/src/` or `/usr/src/linux-headers-*/` directories without downloading, which contain the build system and headers. However, to explore the complete source or make modifications, the full kernel source will need to be downloaded.
