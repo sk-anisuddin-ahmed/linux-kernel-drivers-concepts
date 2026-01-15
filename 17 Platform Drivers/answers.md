@@ -80,6 +80,60 @@ Create a platform driver for a simulated sensor device that:
 - Use ioremap() to map physical to virtual addresses
 - Handle probe() and remove() lifecycle
 
+**In the device module:**
+
+```c
+static struct my_pdata {
+    int id;
+    char label[20];
+} my_data = { .id = 5, .label = "SensorNode" };
+
+my_pdev.dev.platform_data = &my_data;
+```
+
+**Solution**
+- https://github.com/sk-anisuddin-ahmed/Linux-Kernel-LDD-Program-Examples/tree/main/016_platform_sensor_data
+
+- https://github.com/sk-anisuddin-ahmed/Linux-Kernel-LDD-Program-Examples/tree/main/017_platform_sensor_data_dvctree
+
+**In the driver's `probe()`:**
+
+```c
+struct my_pdata *pdata = dev_get_platdata(&pdev->dev);
+printk(KERN_INFO "Data: id=%d, label=%s\n", pdata->id, pdata->label);
+```
+
 ## Task 3: Register Device from Board Code
 
 Create board initialization code that registers the platform device
+
+**Simulate Two Devices**
+
+- Register two platform devices with names `"dev0"` and `"dev1"`
+- Write a driver that handles both (via `.of_match_table` or `.name`)
+- Show both probe messages
+
+**Solution**
+
+```c
+static struct platform_device sensor_dev0 = {
+    .name = "sensor_driver",
+    .id = 0,
+    .resource = sensor_resources_dev0,
+    .num_resources = ARRAY_SIZE(sensor_resources_dev0),
+};
+
+static struct platform_device sensor_dev1 = {
+    .name = "sensor_driver",
+    .id = 1,
+    .resource = sensor_resources_dev1,
+    .num_resources = ARRAY_SIZE(sensor_resources_dev1),
+};
+
+static int __init sensor_dvc_init(void)
+{
+    platform_device_register(&sensor_dev0);
+    platform_device_register(&sensor_dev1);
+    return 0;
+}
+```

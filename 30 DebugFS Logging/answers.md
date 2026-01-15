@@ -1,26 +1,63 @@
-# Section 30: DebugFS Logging � Assignment
+# Section 30: Final Integration & Validation
 
-## Task 1: Theory Questions
+## Task 1: Validate Your Driver Lifecycle
 
-1. **DebugFS vs Procfs**:
+Boot system
 
-2. **Mount Location**:
+Auto-load driver via overlay
 
-3. **File Operations**:
+Interact via /dev/gpiobtn
 
-4. **Security Model**:
+Suspend + resume
 
-5. **Performance Considerations**:
+Run debug self-test
 
-## Task 2: Event Logging via DebugFS
+Unload module cleanly
 
-Implement debug logging interface showing driver events:
+**Validation Checklist:**
+```bash
+reboot
+lsmod | grep gpiobtn           # Should show loaded
+dmesg | grep gpiobtn           # Should show probe message
 
-**Key Requirements:**
-- Create debugfs files for reading logs
-- Buffer event messages
-- Support filtering and clearing
+rmmod gpiobtn
+dmesg | grep "unload"          # Verify cleanup messages
+lsmod | grep gpiobtn           # Should not appear
 
-## Task 3: Runtime Tuning Interface
+modprobe gpiobtn
+lsmod | grep gpiobtn           # Should be back
+```
 
-Create debugfs interface to modify driver behavior at runtime
+## Task 2: Finalize Your Driver Package
+
+Ensure your driver folder includes:
+
+**Complete folder structure:**
+```
+gpiobtn_driver/
+├── Makefile
+├── gpiobtn.c                    # Main driver source
+├── gpiobtn.h                    # Header with IOCTL defs
+├── gpiobtn-overlay.dtbo         # Compiled device tree overlay
+├── README.md                    # Build/install instructions
+├── install.sh                   # Installation script
+├── uninstall.sh                 # Uninstall script
+├── test/
+│   ├── test_epoll.c             # Userspace epoll test
+│   ├── test_ioctl.c             # Ioctl test
+│   └── Makefile
+├── udev/
+│   └── 99-gpiobtn.rules         # Auto-loading rules
+└── dts/
+    └── gpiobtn-overlay.dts      # Device tree source
+```
+
+## Task 3: (Optional) Explore Beyond
+
+Log Session a Yocto recipe for your driver
+
+Add support for multiple GPIO banks
+
+Port it to SPI/I2C device
+
+Use dynamic device tree overlays from user space
