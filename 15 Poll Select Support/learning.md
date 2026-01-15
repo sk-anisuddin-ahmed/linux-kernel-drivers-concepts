@@ -201,3 +201,54 @@ MODULE_DESCRIPTION("Poll/select support");
 4. **Poll doesn't wait in driver**: It only registers queues; kernel does the waiting
 5. **Signal handling**: If blocked in poll, wake it with a signal
 6. **Edge vs Level triggered**: Mask tells kernel about current state (level), not changes (edge)
+
+---
+
+## Mental Flow: How Blocking I/O and Poll Actually Work
+
+### Case 1: Blocking read()
+
+**Flow:**
+
+1. User program calls `read(fd, buf, size)`
+2. Kernel dispatches to your driver's `dev_read()`
+3. Inside `dev_read()`, your code calls `wait_event_interruptible(wq, data_available)`
+4. **If data_available == 0**: Kernel puts the user process to sleep on wait queue `wq`
+5. Kernel marks it as "not runnable" and switches to other processes
+6. Another process writes to device → calls `dev_write()`
+7. `dev_write()` sets `data_available = 1` and calls `wake_up_interruptible(&wq)`
+8. Kernel wakes the sleeping process → it resumes inside `dev_read()`
+9. `read()` copies data to user-space and returns
+
+**Summary:** User calls `read()` → kernel sees no data → kernel puts user process to sleep → later `wake_up_interruptible()` wakes it → `read()` returns.
+
+---
+
+### Case 2: poll() / select()
+
+**Flow:**
+
+1. User program calls `poll(&pfd, 1, -1)` with timeout -1 (wait forever)
+2. Kernel enters your driver's `dev_poll()`
+3. Your code calls `poll_wait(file, &wq, wait)` → registers the process with the wait queue
+4. Your code returns a mask (e.g., 0 if no data)
+5. **If data_available == 0**: Kernel marks FD as not ready → user process sleeps inside kernel's poll loop
+6. Another process writes to device → calls `dev_write()`
+7. `dev_write()` sets `data_available = 1` and calls `wake_up_interruptible(&wq)`
+8. Kernel wakes the process and **re-checks readiness** by calling `dev_poll()` again
+9. This time `dev_poll()` returns `POLLIN` (data ready)
+10. `poll()` returns to user-space with "FD is readable"
+
+**Summary:** User calls `poll()` → kernel checks driver → sees no data → kernel puts user process to sleep → later `wake_up_interruptible()` wakes it and re-checks → `poll()` returns with "ready".
+
+---
+
+## Key Difference
+
+| Aspect | Blocking read() | poll() / select() |
+|--------|-----------------|-------------------|
+| **Waits on** | Single device in `read()` call | Multiple devices simultaneously |
+| **Application responsibility** | Call `read()` for each device | Call `poll()` once for all devices |
+| **Kernel responsibility** | Put process to sleep on single queue | Put process to sleep, wake on any event, check all devices |
+| **Use case** | Simple single-device scenarios | Event-driven multiplexing (servers, event loops) |
+| **Efficiency** | One call per device | One call monitors many devices |
